@@ -1,0 +1,384 @@
+
+yum install bind-utils
+
+yum install telnet -y
+
+
+
+
+Q: you undrstand we cant wathc you and typre in our terminal at the same time
+
+A: ifconfig | grep inet
+
+
+========================================================================================================================
+Full Steps::
+
+
+08:06 AM: Install BIND
+
+
+yum install bind-utils
+
+yum install bind -y
+
+Configure one domain zone file
+
+vi /var/named/sampledomain.com.db
+
+$TTL 14400 ;
+$ORIGIN sampledomain.com.
+@  1D  IN  SOA ns1.sampledomain.com. hostmaster.sampledomain.com. (
+         2016081403 ; serial
+         3H ; refresh
+         15 ; retry
+         1w ; expire
+         3h ; nxdomain ttl
+        )
+       IN  NS     ns1.sampledomain.com.
+       IN  A      192.168.2.11
+ns1    IN  A      192.168.2.11
+www    IN  A      192.168.2.11
+g      IN  CNAME  google.com.
+
+cd /var/named
+
+named-checkzone sampledomain.com sampledomain.com.db
+
+named-checkconf /etc/named.conf
+
+4. service named restart
+
+														   
+echo "192.168.2.8 sampledomain.com" >>/etc/hosts
+
+
+ vi /etc/named.rfc1912.zones
+
+zone "sampledomain.com" IN {
+        type master;
+        file "sampledomain.com.db";
+        allow-update { none; };
+};
+========================
+
+														   
+
+5. dig @localhost sampledomain.com
+
+=======================================
+
+  vi /etc/httpd/conf/httpd.conf
+   
+ =>>> uncommnet the Server name in httpd.conf file for avoid below error  ::::service httpd restart
+Stopping httpd:                                            [  OK  ]
+Starting httpd: httpd: Could not reliably determine the server's fully qualified domain name, using localhost.localdomain for ServerName
+                                                           [  OK  ]
+
+														   
+/var/log/httpd/acces_log
+
+tail -f /var/log/httpd/acces_log
+
+
+Add the Virtual hot details in httpd.conf end of the file
+
+vi /etc/httpd/conf/httpd.conf
+
+<VirtualHost 192.168.2.8:80>
+     ServerName sampledomain.com
+	 DocumentRoot /var/www/html
+</VirtualHost>
+
+======================================
+
+service named restart
+
+
+ /usr/sbin/httpd -V
+   
+   
+ 
+>>Next apachectl -t
+
+>>Restart   apachectl restart
+
+>> curl 192.168.102.9
+
+
+cd /etc/httpd/conf.d
+
+
+echo "sampledomain.com 192.168.2.9" >>/etc/hosts
+					
+cd /etc/httpd/conf.d
+
+vi sampledomain.com.conf
+
+<VirtualHost 192.168.2.8:80>
+     ServerName sampledomain.com
+	 DocumentRoot /var/www/html/web-host
+</VirtualHost>
+========================================
+
+
+document root ::: /var/www/html
+
+vi index.html
+
+<h1>it works!</h1>
+
+
+======================
+
+cd /var/www/html
+
+mkdir web-host
+cd /vat/www/html/web-host
+
+vi index.html
+
+<h1>This is my first Web design</h1>
+
+=====================================
+
+
+
+Audience Question
+
+Q: which DevOps role uses/works in these network related things like what we are discussing...how we can use these things in real time scenario 
+
+A: http://whois.sc
+
+
+==============================================================================================================
+
+
+Nginx :::
+
+ yum install epel-release*
+ 
+ cd /etc/yum.repos.d
+ 
+ fOR os FIND ::::  cat /etc/issue
+ 
+ yum install nginx
+ 
+ cd /etc/nginx/conf.d/
+ 
+ if default file is there in this directoy,then change the root path to this root /var/www/html/sampledomain; in that default file in this location.
+ 
+ vi sampledomain.com.conf
+ 
+ server {
+  listen 80;
+  server_name sampledomain.com;
+   root /var/www/html/sampledomain;
+}
+
+===================================
+ 
+ nginx -t
+ 
+ 
+ 
+ >> Without open the file,We can go by any line Ex : vi +2 filename
+ 
+ i.e it will go to 2 line of that file name
+ 
+mkdir /var/www/html/sampledomain 
+ 
+ cd /var/www/html/sampledomain
+ 
+ 
+ vi index.html
+ 
+ <h1>This web page</h1>
+<h2>Hi Alll How are you</h2>
+<h3>Nice to meet you aftera long time</h3>
+
+=========================================
+
+service nginx restart
+
+======================================================================================
+
+
+
+========================
+
+HA Proxy
+
+=============================
+ 
+ 
+ 1. Installation
+	yum install haproxy
+
+	
+(Note : Before configuration below file,Need to create 2 or more then virtual machines with the apache server installed and need to verify in those machine localhost is working web page or not,once done go for below steps and update the server ips of these machines in the Back end Apache:::)
+
+
+2. Configure 
+Edit File : /etc/ha-proxy.conf (haproxy.cfg)
+
+frontend HTTP
+ bind *:80
+default_backend APACHE
+
+backend APACHE  
+    server webserver01 192.168.2.10:80 check
+    server webserver02 192.168.2.11:80 check
+    server webserver03 192.168.2.5:80 check
+   
+   
+
+3. Restart HAProxy
+	service haproxy restart
+	
+Now :: Open the HaProxy Server console i.e localhost -> It will balance both the server machines....when you refreshing it will change automatically from one to another server)	
+	
+=============================================================	
+	
+
+	
+	NFS 
+===========================
+
+
+yum install nfs*
+
+
+
+create a directory in mnt
+
+/etc/init.d/rpcbind status
+ /etc/init.d/rpcbind start
+ 
+i.e mkdir /mnt/nfs*
+
+ Check NFS user,group 
+ grep nfs /etc/passwd
+65534
+
+4. set ownership
+
+chown 65534:65534 /mnt/nfs
+
+or 
+
+chown nfsnobody:nfsnobody -R /mnt/nfs
+
+5. Set export directory permission
+
+vi /etc/exports
+
+/mnt/nfs 192.168.2.*(rw,sync)
+	
+(Note : above mention which ip series do you want to mount this nfs drive
+
+6.exportfs
+
+exportfs -a
+
+exportfs -rv
+
+
+Client Side
+1. Install NFS
+ yum install nfs-utils nfs-utils-lib
+ /etc/init.d/rpcbind status
+ /etc/init.d/rpcbind start
+2. Create the /mnt/nfsshare
+mkdir /mnt/nfsshare
+3. Mount the NFS Share
+mount -t nfs 192.168.2.6:/mnt/nfs /mnt/nfsshare/
+df -h
+
+==============================================
+
+Nginx ::: Server1 and Server 2
+
+Nginx :: Load Balancer(HA Proxy) :: Server1 and Server 2
+===================================================================
+
+
+Nginx ::: Server1 and Server 2
+
+steps :::::::::::::::::::::
+
+cd /etc/nginx/conf.d/
+
+vi lb.conf
+
+upstream backend
+{
+
+  server 192.168.2.10:80;
+  server 192.168.2.13:80;
+  
+ }
+server
+{
+listen 80;
+server_name lbdomain.com;
+
+location / {
+  proxy_pass http://backend;
+  }
+ } 
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+Nginx :: Load Balancer(HA Proxy) :: Server1 and Server 2
+
+::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+/etc/ha-proxy.conf (haproxy.cfg)
+
+vi /etc/haproxy/haproxy.cfg
+
+frontend HTTP
+ bind *:8080
+default_backend APACHE
+
+backend APACHE  
+    server webserver01 192.168.2.10:80 check
+    server webserver02 192.168.2.11:80 check
+    server webserver03 192.168.2.5:80 check
+
+	
+cd /etc/nginx/conf.d	
+	
+vi nginx-ha-lb.conf
+
+upstream ha-backend
+{
+
+  server 192.168.2.19:8080;
+  
+ }
+server
+{
+listen 80;
+server_name nginxhalbdomain.com;
+
+location / {
+  proxy_pass http://ha-backend;
+  }
+ } 
+ 
+ ::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+
+	
+
+
+
+Git Hub:::::::::::::::::
+==========================================================================
+
+
